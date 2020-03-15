@@ -9,11 +9,25 @@ from nltk.corpus import stopwords
 import json
 import nltk
 
+'''
+TODO:
+    find more data (too neutral for now)
+        - added happy.txt and sad.txt --- not enough
+    clean up code
+    search for all 30 in DOW
+        -DONE
+    refine search to pull from stock accts
+'''
 
 #test set should be at least len 100 when actually running model
     #set to 10 for testing to not reach 180 tweets/15 min API allows
-TEST_SET_SIZE = 100
+TEST_SET_SIZE = 180
 EXCEL_CREATED = True
+KEYWORDS = [
+    "AAPL", "AXP", "BA", "CAT", "CSCO", "CVX", "DIS", "DOW", "GS", "HD", "IBM",
+    "INTC", "JNJ", "JPM", "KO", "MCD", "MMM", "MRK", "MSFT", "NKE", "PFE", "PG",
+    "TRV", "UNH", "UTX", "V", "VZ", "WBA", "WMT", "XOM"
+]
 
 #open API keys (omit first line as it contains format)
 twitterKeys = open("API.txt", 'r').read().splitlines()[1:]
@@ -26,7 +40,7 @@ twittApi = twitter.Api(consumer_key=twitterKeys[0],
 ############################### Build Test Set #################################
 
 def buildTestSet(searchWord, testSetSize):
-    print("Beginning Search with:", searchWord, "size:", testSetSize)
+    print("Searching for:", testSetSize, "tweets with:", searchWord)
     try:
         tweets = twittApi.GetSearch(searchWord, count=testSetSize, lang="en")
         print("Found:", len(tweets), "tweets for:", searchWord)
@@ -40,16 +54,17 @@ def buildTestSet(searchWord, testSetSize):
     except Exception as e:
         print("Exception raised:", e)
         return None
-
-testDataSet = buildTestSet(input("Enter a search keyword:"), TEST_SET_SIZE)
-if testDataSet == None:
-    sys.exit("ABORT: error raised in testSet")
+testDataSet = []
+for key in KEYWORDS:
+    testDataSet.append(buildTestSet(key, TEST_SET_SIZE//len(KEYWORDS)))
+if testDataSet == []:
+    sys.exit("ABORT: testSet empty")
 
 print("testDataSet complete")
 
 ############################## Build Training Set ##############################
 
-def buildTrainingSet(corpusFile, tweetDataFile):
+def buildOrigTrainingSet(corpusFile, tweetDataFile):
     trainingDataSet = []
 
     #If excels already been created, we dont have to redo building, check global
@@ -63,7 +78,6 @@ def buildTrainingSet(corpusFile, tweetDataFile):
                     objJson["text"] = row[1]
                     objJson["label"] = row[2]
                     objJson["topic"] = row[3]
-                    #python used the single ' so replacing necessary
                     trainingDataSet.append(objJson)
         return trainingDataSet
 
@@ -99,8 +113,20 @@ def buildTrainingSet(corpusFile, tweetDataFile):
                 print(e)
     return trainingDataSet
 
+def altTrainingSet(goodFile, badFile):
+    def returnDict(line, sentiment):
+        return {"tweet_id": "", "text": line.strip(), "label": sentiment, "topic": ""}
+    resLst = []
+    goodFile = open(goodFile, 'r')
+    for line in goodFile:
+        resLst.append(returnDict(line, 'positive'))
+    for line in badFile:
+        resLst.append(returnDict(line, 'negative'))
+    return resLst
+
 print("\n\n----------------BUILDING TRAINING SET----------------\n\n")
-trainingData = buildTrainingSet("corpus.csv", "tweetDataFile.csv")
+trainingData = buildOrigTrainingSet("corpus.csv", "tweetDataFile.csv")
+trainingData += altTrainingSet("happy.txt", "sad.txt")
 print("training data built")
 
 ################################################################################
@@ -126,7 +152,9 @@ print("\n\n----------------PROCESSING TWEETS----------------\n\n")
 
 tweetProcessor = PreProcessTweets()
 preprocessedTrainingSet = tweetProcessor.processTweets(trainingData)
-preprocessedTestSet = tweetProcessor.processTweets(testDataSet)
+preprocessedTestSet = []
+for keySet in testDataSet:
+    preprocessedTestSet.append(tweetProcessor.processTweets(keySet))
 
 print("processing complete")
 
@@ -156,19 +184,19 @@ trainingFeatures = nltk.classify.apply_features(extract_features, preprocessedTr
 
 NBayesClassifier = nltk.NaiveBayesClassifier.train(trainingFeatures)
 
-print(preprocessedTestSet)
-NBResultLabels = [NBayesClassifier.classify(extract_features(tweet[0])) for tweet in preprocessedTestSet]
-print(NBResultLabels)
-posRes = NBResultLabels.count('positive')
-negRes = NBResultLabels.count('negative')
-print("positive val:", posRes, "negative val:", negRes)
+for i in range(len(preprocessedTestSet)):
+    eachStock = preprocessedTestSet[i]
+    NBResultLabels = [NBayesClassifier.classify(extract_features(tweet[0])) for tweet in eachStock]
+    posRes = NBResultLabels.count('positive')
+    negRes = NBResultLabels.count('negative')
+    print("For keyword:", KEYWORDS[i], "positive val:", posRes, "negative val:", negRes)
 
-# get the majority vote
-if posRes == negRes:
-    print("Overall Neutral Sentiment.", posRes, "out of:", TEST_SET_SIZE)
-elif posRes > negRes:
-    print("Overall Positive Sentiment")
-    print("\tPositive Sentiment Percentage = " + str(100*posRes/len(NBResultLabels)) + "%")
-else:
-    print("Overall Negative Sentiment")
-    print("\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
+    # get the majority vote
+    if posRes == negRes:
+        print("\tOverall Neutral Sentiment.", posRes, "out of:", TEST_SET_SIZE//len(KEYWORDS))
+    elif posRes > negRes:
+        print("\tOverall Positive Sentiment")
+        print("\t\tPositive Sentiment Percentage = " + str(100*posRes/len(NBResultLabels)) + "%")
+    else:
+        print("\tOverall Negative Sentiment")
+        print("\t\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
