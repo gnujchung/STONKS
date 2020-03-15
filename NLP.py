@@ -7,11 +7,12 @@ from nltk.tokenize import word_tokenize
 import string
 from nltk.corpus import stopwords
 import json
+import nltk
 
 
-#test set should be len 100 when actually running model
+#test set should be at least len 100 when actually running model
     #set to 10 for testing to not reach 180 tweets/15 min API allows
-TEST_SET_SIZE = 10
+TEST_SET_SIZE = 100
 EXCEL_CREATED = True
 
 #open API keys (omit first line as it contains format)
@@ -27,7 +28,7 @@ twittApi = twitter.Api(consumer_key=twitterKeys[0],
 def buildTestSet(searchWord, testSetSize):
     print("Beginning Search with:", searchWord, "size:", testSetSize)
     try:
-        tweets = twittApi.GetSearch(searchWord, count=testSetSize)
+        tweets = twittApi.GetSearch(searchWord, count=testSetSize, lang="en")
         print("Found:", len(tweets), "tweets for:", searchWord)
         out = [{"text":status.text, "label":None} for status in tweets]
 
@@ -44,7 +45,7 @@ testDataSet = buildTestSet(input("Enter a search keyword:"), TEST_SET_SIZE)
 if testDataSet == None:
     sys.exit("ABORT: error raised in testSet")
 
-print("testDataSet:", testDataSet)
+print("testDataSet complete")
 
 ############################## Build Training Set ##############################
 
@@ -127,4 +128,47 @@ tweetProcessor = PreProcessTweets()
 preprocessedTrainingSet = tweetProcessor.processTweets(trainingData)
 preprocessedTestSet = tweetProcessor.processTweets(testDataSet)
 
+print("processing complete")
+
 ################################################################################
+def buildVocabulary(preprocessedTrainingData):
+    all_words = []
+
+    for (words, sentiment) in preprocessedTrainingData:
+        all_words.extend(words)
+
+    wordlist = nltk.FreqDist(all_words)
+    word_features = wordlist.keys()
+
+    return word_features
+
+def extract_features(tweet):
+    tweet_words = set(tweet)
+    features = {}
+    for word in word_features:
+        features['contains(%s)' % word] = (word in tweet_words)
+    return features
+
+print("\n\n----------------RUNNING MODEL----------------\n\n")
+
+word_features = buildVocabulary(preprocessedTrainingSet)
+trainingFeatures = nltk.classify.apply_features(extract_features, preprocessedTrainingSet)
+
+NBayesClassifier = nltk.NaiveBayesClassifier.train(trainingFeatures)
+
+print(preprocessedTestSet)
+NBResultLabels = [NBayesClassifier.classify(extract_features(tweet[0])) for tweet in preprocessedTestSet]
+print(NBResultLabels)
+posRes = NBResultLabels.count('positive')
+negRes = NBResultLabels.count('negative')
+print("positive val:", posRes, "negative val:", negRes)
+
+# get the majority vote
+if posRes == negRes:
+    print("Overall Neutral Sentiment.", posRes, "out of:", TEST_SET_SIZE)
+elif posRes > negRes:
+    print("Overall Positive Sentiment")
+    print("\tPositive Sentiment Percentage = " + str(100*posRes/len(NBResultLabels)) + "%")
+else:
+    print("Overall Negative Sentiment")
+    print("\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
