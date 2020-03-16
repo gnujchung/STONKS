@@ -14,7 +14,6 @@ TODO:
     add all data back in
     check all funcs
     refine search to pull from stock accts
-    figure out stocks data set issues
 
 
     add elapsed time
@@ -267,4 +266,4 @@ for i in range(len(preprocessedTestSet)):
     currTime = newTime
     print(KEYWORDS[i], "completed in:", elapsed, "seconds")
 
-print("running complete in:", round(time() - origTime, 2), "seconds")
+print("Overall time to complete in:", round(time() - origTime, 2), "seconds")
