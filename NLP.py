@@ -1,21 +1,24 @@
 import twitter
 import csv
-import time
+from time import sleep
+from time import time
 import sys
 import re
 from nltk.tokenize import word_tokenize
-import string
 from nltk.corpus import stopwords
-import json
 import nltk
-from time import time
+import string
 
 '''
 TODO:
-    add elapsed time
-    cut words w less than 3 char out
+    add all data back in
     check all funcs
     refine search to pull from stock accts
+    figure out stocks data set issues
+
+
+    add elapsed time
+        -DONE
     find more data (too neutral for now)
         - added happy.txt and sad.txt --- not enough
         - added stocksDataSet.csv --DONE
@@ -27,9 +30,22 @@ TODO:
         -DONE
     clean up code
         -DONE
+    cut words w less than 3 char out
+        -DONE
+    check data after processed
+        - duplicates from original data set
+            -DONE --- rt counting
+        - ellipsis appearing
+            -DONE
+        - .AT_USER
+            -DONE
+        - remove all tickers from tweets (create set and check if word not in)
+            -DONE
+        - remove all numbers
+            -DONE
 '''
 
-TEST_SET_SIZE = 300 # total number of tweets fetched for the testing data
+TEST_SET_SIZE = 3000 # total number of tweets fetched for the testing data
 EXCEL_CREATED = True #tweetDataFile.csv was built by manually requesting the tweets
 KEYWORDS = [
     "AAPL", "AXP", "BA", "CAT", "CSCO", "CVX", "DIS", "DOW", "GS", "HD", "IBM",
@@ -37,7 +53,7 @@ KEYWORDS = [
     "TRV", "UNH", "UTX", "V", "VZ", "WBA", "WMT", "XOM"
 ]
 
-currTime = time()
+origTime = currTime = time()
 
 # open API keys (omit first line as it contains format)
 # API keys should NOT be stored in github repo, request keys from Tony if needed
@@ -64,7 +80,7 @@ def buildTestSet(searchWord, testSetSize):
         return out
     except Exception as e:
         print("Exception raised:", e)
-        sys.exit("ABORT: Twitter API error for:", searchWord)
+        sys.exit("ABORT: Twitter API error for: " + searchWord)
 
 testDataSet = []
 for key in KEYWORDS:
@@ -89,6 +105,7 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
                     objJson["text"] = row[0]
                     objJson["label"] = row[1]
                     trainingDataSet.append(objJson)
+        csvfile.close()
         return trainingDataSet
 
     corpus = []
@@ -97,6 +114,7 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
         lineReader = csv.reader(csvfile,delimiter=',', quotechar="\"")
         for row in lineReader:
             corpus.append({"tweet_id":row[2], "label":row[1]})
+    csvfile.close()
 
     rate_limit = 180
     sleep_time = 900/rate_limit
@@ -108,7 +126,7 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
             tweet["text"] = status.text
             del tweet["tweet_id"]
             trainingDataSet.append(tweet)
-            time.sleep(sleep_time)
+            sleep(sleep_time)
         except Exception as e:
             print("Exception raised:", e)
             continue
@@ -121,6 +139,7 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
                 linewriter.writerow([tweet["text"], tweet["label"]])
             except Exception as e:
                 print(e)
+    csvfile.close()
     return trainingDataSet
 
 def dualTrainingSet(goodFile, badFile):
@@ -131,41 +150,50 @@ def dualTrainingSet(goodFile, badFile):
     badFile = open(badFile, 'r')
     for line in badFile:
         resLst.append({"text": line.strip(), "label": "negative"})
+    goodFile.close(); badFile.close()
     return resLst
 
 def stocksTrainingSet(fileName):
     resLst = []
-    stocksFile = open(fileName, 'r')
-    for line in stocksFile:
-        cols = line.strip().split(',')
-        resLst.append({"text": cols[1], "label": cols[2]})
+    with open(fileName,'r') as csvfile:
+        lineReader = csv.reader(csvfile,delimiter=',',quotechar="\"")
+        for row in lineReader:
+            resLst.append({"text": row[1], "label": row[2]})
+    csvfile.close()
     return resLst
 
 
 print("\n\n----------------BUILDING TRAINING SET----------------\n\n")
 trainingData = buildOrigTrainingSet("corpus.csv", "tweetDataFile.csv")
 trainingData += dualTrainingSet("happy.txt", "sad.txt")
-#trainingData += stocksTrainingSet("stocksDataSet.csv")
+trainingData += stocksTrainingSet("stocksDataSet.csv")
 newTime = time()
 elapsed = round(newTime - currTime, 2)
 currTime = newTime
 print("training data built in:", elapsed, "seconds")
 
 ################################################################################
+
 class PreProcessTweets:
     def __init__(self):
-        self._stopwords = set(stopwords.words("english") + list(string.punctuation) + ["AT_USER", "URL"])
+        self._stopwords = set(stopwords.words("english") + list(string.punctuation) \
+            + ["AT_USER", "URL", ".AT_USER", "..."] + [tick.lower() for tick in KEYWORDS])
 
     def _processTweet(self, tweet):
+        def isFloat(word):
+            try: float(word); return True
+            except: return False
+        def isValid(word):
+            return word not in self._stopwords and len(word) > 2 and not isFloat(word)
         tweet = tweet.lower() # convert text to lower-case
         tweet = re.sub('((www\.[^\s]+)|(https?://[^\s]+))', 'URL', tweet) # remove URLs
         tweet = re.sub('@[^\s]+', 'AT_USER', tweet) # remove usernames
         tweet = re.sub(r'#([^\s]+)', r'\1', tweet) # remove the # in #hashtag
         tweet = word_tokenize(tweet) # remove repeated characters (helloooooooo into hello)
-        return [word for word in tweet if word not in self._stopwords]
+        return [word for word in tweet if isValid(word)]
 
     def processTweets(self, list_of_tweets):
-        processedTweets=[]
+        processedTweets = []
         for tweet in list_of_tweets:
             processedTweets.append((self._processTweet(tweet["text"]),tweet["label"]))
         return processedTweets
@@ -234,7 +262,9 @@ for i in range(len(preprocessedTestSet)):
     else:
         print("\tOverall Negative Sentiment")
         print("\t\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
-newTime = time()
-elapsed = round(newTime - currTime, 2)
-currTime = newTime
-print("running complete in:", elapsed, "seconds")
+    newTime = time()
+    elapsed = round(newTime - currTime, 2)
+    currTime = newTime
+    print(KEYWORDS[i], "completed in:", elapsed, "seconds")
+
+print("running complete in:", round(time() - origTime, 2), "seconds")
