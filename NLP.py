@@ -9,47 +9,12 @@ from nltk.corpus import stopwords
 import nltk
 import string
 
-'''
-TODO:
-    add all data back in
-    check all funcs
-    refine search to pull from stock accts
-
-
-    add elapsed time
-        -DONE
-    find more data (too neutral for now)
-        - added happy.txt and sad.txt --- not enough
-        - added stocksDataSet.csv --DONE
-    prune all "irrelevant" data from original dataset
-        -DONE
-    search for all 30 in DOW
-        -DONE
-    remove extra dict keys
-        -DONE
-    clean up code
-        -DONE
-    cut words w less than 3 char out
-        -DONE
-    check data after processed
-        - duplicates from original data set
-            -DONE --- rt counting
-        - ellipsis appearing
-            -DONE
-        - .AT_USER
-            -DONE
-        - remove all tickers from tweets (create set and check if word not in)
-            -DONE
-        - remove all numbers
-            -DONE
-'''
-
 TEST_SET_SIZE = 3000 # total number of tweets fetched for the testing data
 EXCEL_CREATED = True #tweetDataFile.csv was built by manually requesting the tweets
 KEYWORDS = [
-    "AAPL", "AXP", "BA", "CAT", "CSCO", "CVX", "DIS", "DOW", "GS", "HD", "IBM",
-    "INTC", "JNJ", "JPM", "KO", "MCD", "MMM", "MRK", "MSFT", "NKE", "PFE", "PG",
-    "TRV", "UNH", "UTX", "V", "VZ", "WBA", "WMT", "XOM"
+    "$AAPL", "$AXP", "$BA", "$CAT", "$CSCO", "$CVX", "$DIS", "$DOW", "$GS", "$HD",
+    "$IBM", "$INTC", "$JNJ", "$JPM", "$KO", "$MCD", "$MMM", "$MRK", "$MSFT", "$NKE",
+    "$PFE", "$PG", "$TRV", "$UNH", "$UTX", "$V", "$VZ", "$WBA", "$WMT", "$XOM"
 ]
 
 origTime = currTime = time()
@@ -65,10 +30,10 @@ twittApi = twitter.Api(consumer_key=twitterKeys[0],
 
 ############################### Build Test Set #################################
 
-def buildTestSet(searchWord, testSetSize):
-    print("Searching for:", testSetSize, "tweets with:", searchWord)
+def buildTestSet(searchWord, searchSize):
+    print("Searching for:", searchSize, "tweets with:", searchWord)
     try:
-        tweets = twittApi.GetSearch(searchWord, count=testSetSize, lang="en")
+        tweets = twittApi.GetSearch(searchWord + "-filter:retweets AND -filter:replies", count=searchSize, lang="en")
         print("Found:", len(tweets), "tweets for:", searchWord)
         out = [{"text":status.text, "label":None} for status in tweets]
 
@@ -163,9 +128,10 @@ def stocksTrainingSet(fileName):
 
 
 print("\n\n----------------BUILDING TRAINING SET----------------\n\n")
-trainingData = buildOrigTrainingSet("corpus.csv", "tweetDataFile.csv")
-trainingData += dualTrainingSet("happy.txt", "sad.txt")
-trainingData += stocksTrainingSet("stocksDataSet.csv")
+trainingData = buildOrigTrainingSet("datasets/corpus.csv", "datasets/tweetDataFile.csv")
+trainingData += dualTrainingSet("datasets/happy.txt", "datasets/sad.txt")
+trainingData += dualTrainingSet("datasets/mcdonaldPos.txt", "datasets/mcdonaldNeg.txt")
+trainingData += stocksTrainingSet("datasets/stocksDataSet.csv")
 newTime = time()
 elapsed = round(newTime - currTime, 2)
 currTime = newTime
@@ -248,6 +214,8 @@ print("\n\n----------------RUNNING MODEL----------------\n\n")
 for i in range(len(preprocessedTestSet)):
     eachStock = preprocessedTestSet[i]
     NBResultLabels = [NBayesClassifier.classify(extract_features(tweet[0])) for tweet in eachStock]
+    for j in range(len(NBResultLabels)):
+        testDataSet[i][j]["label"] = NBResultLabels[j]
     posRes = NBResultLabels.count('positive')
     negRes = NBResultLabels.count('negative')
     print("For keyword:", KEYWORDS[i], "positive val:", posRes, "negative val:", negRes)
@@ -264,6 +232,15 @@ for i in range(len(preprocessedTestSet)):
     newTime = time()
     elapsed = round(newTime - currTime, 2)
     currTime = newTime
-    print(KEYWORDS[i], "completed in:", elapsed, "seconds")
+    print("\tcompleted in:", elapsed, "seconds")
 
 print("Overall time to complete in:", round(time() - origTime, 2), "seconds")
+
+#testing lines to see how models classifying individual tweets
+'''
+temp = open("tempTweetsClassed.txt", 'w')
+for stock in testDataSet:
+    for tweet in stock:
+        temp.write(str(tweet) + '\n')
+temp.close()
+'''
