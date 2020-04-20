@@ -17,6 +17,39 @@ KEYWORDS = [
     "$PFE", "$PG", "$TRV", "$UNH", "$UTX", "$V", "$VZ", "$WBA", "$WMT", "$XOM"
 ]
 
+COMPANIES = {
+    "$AAPL" : "Apple" ,
+    "$AXP" : "American Express",
+    "$BA" : "Boeing",
+    "$CAT" : "Caterpillar",
+    "$CSCO" : "Costco",
+    "$CVX" : "Chevron",
+    "$DIS" : "The Walt Disney Company",
+    "$DOW" : "Dow Inc.",
+    "$GS" : "Goldman Sachs",
+    "$HD" : "The Home Depot",
+    "$IBM" : "IBM",
+    "$INTC" : "Intel",
+    "$JNJ" : "Johnson & Johnson" ,
+    "$JPM" : "JPMorgan Chase",
+    "$KO" : "Coca-Cola",
+    "$MCD" : "McDonalds",
+    "$MMM" : "3M",
+    "$MRK" : "Merck",
+    "$MSFT" : "Microsoft",
+    "$NKE" : "Nike",
+    "$PFE" : "Pfizer",
+    "$PG" : "Procter & Gamble",
+    "$TRV" : "Travelers Companies",
+    "$UNH" : "United Health",
+    "$UTX" : "United Technologies",
+    "$V" : "Visa",
+    "$VZ" : "Verizon",
+    "$WBA" : "Walgreens Boots Alliance",
+    "$WMT" : "Walmart",
+    "$XOM" : "ExxonMobil" 
+}
+
 origTime = currTime = time()
 
 # open API keys (omit first line as it contains format)
@@ -61,7 +94,7 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
 
     #If excels already been created, we dont have to redo building, check global
     if EXCEL_CREATED:
-        with open(tweetDataFile,'r') as csvfile:
+        with open(tweetDataFile, encoding='windows-1252') as csvfile:
             lineReader = csv.reader(csvfile,delimiter=',',quotechar="\"")
             for row in lineReader:
                 if row != []:
@@ -206,6 +239,7 @@ newTime = time()
 elapsed = round(newTime - currTime, 2)
 currTime = newTime
 print("training complete in:", elapsed, "seconds")
+RESULTS = []
 
 ################################################################################
 
@@ -223,16 +257,21 @@ for i in range(len(preprocessedTestSet)):
     # get the majority vote
     if posRes == negRes:
         print("\tOverall Neutral Sentiment.", posRes+negRes, "out of:", len(eachStock))
+        RESULTS.append([KEYWORDS[i], 'Neutral'])
     elif posRes > negRes:
         print("\tOverall Positive Sentiment")
         print("\t\tPositive Sentiment Percentage = " + str(100*posRes/len(NBResultLabels)) + "%")
+        RESULTS.append([KEYWORDS[i], 'Positive'])
     else:
         print("\tOverall Negative Sentiment")
         print("\t\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
+        RESULTS.append([KEYWORDS[i], 'Negative'])
     newTime = time()
     elapsed = round(newTime - currTime, 2)
     currTime = newTime
     print("\tcompleted in:", elapsed, "seconds")
+
+
 
 print("Overall time to complete in:", round(time() - origTime, 2), "seconds")
 
