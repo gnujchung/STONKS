@@ -1,20 +1,32 @@
-from flask import Flask
-from NLP import RESULTS, COMPANIES
-from flask import jsonify
+from flask import Flask, jsonify
+from NLP import COMPANIES, calculateResult
+import time
+import atexit
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return "hello STONKS"
+company_list = []
 
-@app.route("/test")
 def test():
-    company_list = []
-    for i in RESULTS:
-        company_list.append([COMPANIES.get(i[0]), i[0], i[1]]) 
-    return jsonify(company_list)
+    results = calculateResult()
+    company_list.clear()
+    for i in results:
+        company_list.append({'name': COMPANIES.get(i[0]), 'ticker': i[0], 'sentiment': i[1]})
 
+scheduler = BackgroundScheduler(daemon=True)
+scheduler.add_job(func=test, trigger='interval', minutes=5)
+scheduler.start()
+
+atexit.register(lambda: scheduler.shutdown())
+
+# @app.route("/")
+# def home():
+    # return "hello STONKS"
+
+@app.route("/sentiments")
+def getSentiment():
+    return jsonify(company_list)
 
 if __name__ == "__main__":
     app.run(debug=True)

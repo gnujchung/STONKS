@@ -1,0 +1,4 @@
+nltk==3.4.5
+Flask==1.0.2
+APScheduler==3.6.3
+python_twitter==3.5

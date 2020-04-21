@@ -244,32 +244,36 @@ RESULTS = []
 ################################################################################
 
 print("\n\n----------------RUNNING MODEL----------------\n\n")
+def calculateResult():
+    RESULTS.clear()
+    for i in range(len(preprocessedTestSet)):
+        eachStock = preprocessedTestSet[i]
+        NBResultLabels = [NBayesClassifier.classify(extract_features(tweet[0])) for tweet in eachStock]
+        for j in range(len(NBResultLabels)):
+            testDataSet[i][j]["label"] = NBResultLabels[j]
+        posRes = NBResultLabels.count('positive')
+        negRes = NBResultLabels.count('negative')
+        print("For keyword:", KEYWORDS[i], "positive val:", posRes, "negative val:", negRes)
 
-for i in range(len(preprocessedTestSet)):
-    eachStock = preprocessedTestSet[i]
-    NBResultLabels = [NBayesClassifier.classify(extract_features(tweet[0])) for tweet in eachStock]
-    for j in range(len(NBResultLabels)):
-        testDataSet[i][j]["label"] = NBResultLabels[j]
-    posRes = NBResultLabels.count('positive')
-    negRes = NBResultLabels.count('negative')
-    print("For keyword:", KEYWORDS[i], "positive val:", posRes, "negative val:", negRes)
+        # get the majority vote
+        if posRes == negRes:
+            print("\tOverall Neutral Sentiment.", posRes+negRes, "out of:", len(eachStock))
+            RESULTS.append([KEYWORDS[i], 0])
+        elif posRes > negRes:
+            print("\tOverall Positive Sentiment")
+            print("\t\tPositive Sentiment Percentage = " + str(100*posRes/len(NBResultLabels)) + "%")
+            RESULTS.append([KEYWORDS[i], round(100*posRes/len(NBResultLabels), 2)])
+        else:
+            print("\tOverall Negative Sentiment")
+            print("\t\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
+            RESULTS.append([KEYWORDS[i], round(-100*negRes/len(NBResultLabels), 2)])
+    return RESULTS
+calculateResult()
 
-    # get the majority vote
-    if posRes == negRes:
-        print("\tOverall Neutral Sentiment.", posRes+negRes, "out of:", len(eachStock))
-        RESULTS.append([KEYWORDS[i], 'Neutral'])
-    elif posRes > negRes:
-        print("\tOverall Positive Sentiment")
-        print("\t\tPositive Sentiment Percentage = " + str(100*posRes/len(NBResultLabels)) + "%")
-        RESULTS.append([KEYWORDS[i], 'Positive'])
-    else:
-        print("\tOverall Negative Sentiment")
-        print("\t\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
-        RESULTS.append([KEYWORDS[i], 'Negative'])
-    newTime = time()
-    elapsed = round(newTime - currTime, 2)
-    currTime = newTime
-    print("\tcompleted in:", elapsed, "seconds")
+newTime = time()
+elapsed = round(newTime - currTime, 2)
+currTime = newTime
+print("\tcompleted in:", elapsed, "seconds")
 
 
 
