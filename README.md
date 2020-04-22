@@ -41,7 +41,6 @@ DEPENDENCIES:
           
           
 TO RUN:
-          npm start inside stonks-front-end
           py main.py
-          
+          once sentiments calculated, npm start inside stonks-front-end
 ```                            
