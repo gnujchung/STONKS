@@ -28,6 +28,7 @@ TO RUN:
           pip install python-twitter
           pip install apscheduler
           pip install flask
+          pip install python-dotenv
           pip install nltk
                     - in a py interpreter:
                               >>> import nltk
