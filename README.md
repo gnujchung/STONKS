@@ -24,11 +24,13 @@
 ```
 
 ```
-TO RUN:
+DEPENDENCIES:
           pip install python-twitter
           pip install apscheduler
           pip install flask
           pip install python-dotenv
+          install npm
+                    npm install react
           pip install nltk
                     - in a py interpreter:
                               >>> import nltk
@@ -36,4 +38,10 @@ TO RUN:
                               download all
           place txt with twitter api keys in root dir
           place datasets folder in root dir
+          
+          
+TO RUN:
+          npm start inside stonks-front-end
+          py main.py
+          
 ```                            
