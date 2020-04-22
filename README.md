@@ -22,3 +22,15 @@
         \::/    /                                      ~~                      \::/    /                \:|   |                  \::/    /
          \/____/                                                                \/____/                  \|___|                   \/____/
 ```
+
+
+TO RUN:
+          pip install python-twitter
+          pip install apscheduler
+          pip install flask
+          pip install nltk
+                    - in a py interpreter:
+                              >>> import nltk
+                              >>> nltk.download()
+                              download all
+                              
