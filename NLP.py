@@ -9,6 +9,8 @@ from nltk.corpus import stopwords
 import nltk
 import string
 
+#nltk.download()
+
 TEST_SET_SIZE = 3000 # total number of tweets fetched for the testing data
 EXCEL_CREATED = True #tweetDataFile.csv was built by manually requesting the tweets
 KEYWORDS = [
@@ -94,7 +96,7 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
 
     #If excels already been created, we dont have to redo building, check global
     if EXCEL_CREATED:
-        with open(tweetDataFile, encoding='windows-1252') as csvfile:
+        with open(tweetDataFile, 'r') as csvfile:
             lineReader = csv.reader(csvfile,delimiter=',',quotechar="\"")
             for row in lineReader:
                 if row != []:

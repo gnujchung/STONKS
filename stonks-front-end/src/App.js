@@ -5,7 +5,9 @@ import EnhancedTable from './Table';
 function App() {
   return (
     <div className="App">
-      <EnhancedTable />
+      <EnhancedTable 
+        //handleDelete = {this.handleDelete}
+      />
     </div>
   );
 }
