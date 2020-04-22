@@ -23,7 +23,7 @@
          \/____/                                                                \/____/                  \|___|                   \/____/
 ```
 
-
+```
 TO RUN:
           pip install python-twitter
           pip install apscheduler
@@ -33,4 +33,4 @@ TO RUN:
                               >>> import nltk
                               >>> nltk.download()
                               download all
-                              
+```                            
