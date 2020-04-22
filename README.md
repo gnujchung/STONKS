@@ -33,4 +33,6 @@ TO RUN:
                               >>> import nltk
                               >>> nltk.download()
                               download all
+          place txt with twitter api keys in root dir
+          place datasets folder in root dir
 ```                            
