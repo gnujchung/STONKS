@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-from NLP import COMPANIES, calculateResult
+from NLP import COMPANIES, calculateResult, sentiments
 import time
 import atexit
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -8,14 +8,17 @@ app = Flask(__name__)
 
 company_list = []
 
-def test():
+for i in sentiments:
+    company_list.append({"name" : COMPANIES.get(i[0]), "ticker" : i[0] , "sentiment" : i[1]})
+
+def updateSentiment():
     results = calculateResult()
     company_list.clear()
     for i in results:
-        company_list.append({'name': COMPANIES.get(i[0]), 'ticker': i[0], 'sentiment': i[1]})
+        company_list.append({"name": COMPANIES.get(i[0]), "ticker": i[0], "sentiment": i[1]})
 
 scheduler = BackgroundScheduler(daemon=True)
-scheduler.add_job(func=test, trigger='interval', minutes=5)
+scheduler.add_job(func=updateSentiment, trigger="interval", minutes=60)
 scheduler.start()
 
 atexit.register(lambda: scheduler.shutdown())

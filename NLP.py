@@ -96,7 +96,10 @@ def buildOrigTrainingSet(corpusFile, tweetDataFile):
 
     #If excels already been created, we dont have to redo building, check global
     if EXCEL_CREATED:
-        with open(tweetDataFile, 'r') as csvfile:
+        #linux encoding error (UTF-8)
+        with open(tweetDataFile,encoding='windows-1252') as csvfile:
+        # for windows/Mac, use line below   
+        # with open(tweetDataFile,'r') as csvfile:
             lineReader = csv.reader(csvfile,delimiter=',',quotechar="\"")
             for row in lineReader:
                 if row != []:
@@ -270,7 +273,7 @@ def calculateResult():
             print("\t\tNegative Sentiment Percentage = " + str(100*negRes/len(NBResultLabels)) + "%")
             RESULTS.append([KEYWORDS[i], round(-100*negRes/len(NBResultLabels), 2)])
     return RESULTS
-calculateResult()
+sentiments = calculateResult()
 
 newTime = time()
 elapsed = round(newTime - currTime, 2)
